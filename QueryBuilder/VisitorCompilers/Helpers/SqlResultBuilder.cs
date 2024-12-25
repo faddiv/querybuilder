@@ -9,6 +9,7 @@ namespace SqlKata.VisitorCompilers
     public class SqlResultBuilder
     {
         private readonly Query _query;
+        private readonly string _parameterPrefix;
         private readonly StringBuilder _builderRaw = new StringBuilder();
         private readonly StringBuilder _builderSql = new StringBuilder();
         private readonly List<object> _bindings = new List<object>();
@@ -19,9 +20,10 @@ namespace SqlKata.VisitorCompilers
         public IReadOnlyList<object> Bindings => _bindings;
 
 
-        public SqlResultBuilder(Query query)
+        public SqlResultBuilder(Query query, string parameterPrefix)
         {
             _query = query;
+            _parameterPrefix = parameterPrefix;
         }
 
         public void Append(string sql)
@@ -59,9 +61,9 @@ namespace SqlKata.VisitorCompilers
             SeparatorTracker.EndSection();
         }
 
-        public void AddValue(object value, string parameterPrefix)
+        public void AddValue(object value)
         {
-            var parameter = $"{parameterPrefix}{_bindings.Count}";
+            var parameter = $"{_parameterPrefix}{_bindings.Count}";
             _builderRaw.Append('?');
             _builderSql.Append(parameter);
             _bindings.Add(value);

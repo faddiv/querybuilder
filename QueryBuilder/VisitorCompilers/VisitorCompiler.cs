@@ -36,7 +36,7 @@ namespace SqlKata.VisitorCompilers
 
         public virtual SqlResult Compile(Query query)
         {
-            var sqlResultBuilder = new SqlResultBuilder(query);
+            var sqlResultBuilder = new SqlResultBuilder(query, ParameterPrefix);
             CompileRaw(query, sqlResultBuilder);
 
             var sqlResult = sqlResultBuilder.PrepareResult(ParameterPlaceholder, EscapeCharacter);
@@ -85,14 +85,8 @@ namespace SqlKata.VisitorCompilers
         protected virtual void CompileSelect(Query query, SqlResultBuilder builder)
         {
             builder.Append("SELECT ");
-            builder.StartSection(", ");
             var columns = query.GetComponents<AbstractColumn>(SqlComponents.Select, EngineCode);
-            foreach (var column in columns)
-            {
-                CompileAbstractColumn(column, query, builder);
-            }
-
-            builder.EndSection();
+            CompileColumns(columns, query, builder);
 
             if (query.HasComponent(SqlComponents.From))
             {
@@ -105,6 +99,84 @@ namespace SqlKata.VisitorCompilers
             {
                 var conditions = query.GetComponents<AbstractCondition>(SqlComponents.Where, EngineCode);
                 CompileConditions(conditions, query, builder);
+            }
+
+            if (query.HasComponent(SqlComponents.OrderBy, EngineCode))
+            {
+                var orderBys = query.GetComponents<AbstractOrderBy>(SqlComponents.OrderBy, EngineCode);
+                CompileAbstractOrderBys(orderBys, query, builder);
+            }
+
+            if (query.HasComponent(SqlComponents.Limit, EngineCode))
+            {
+                var limit = query.GetOneComponent<LimitClause>(SqlComponents.Limit, EngineCode);
+                CompileLimitClause(limit, query, builder);
+            }
+
+            if (query.HasComponent(SqlComponents.Offset, EngineCode))
+            {
+                var offset = query.GetOneComponent<OffsetClause>(SqlComponents.Offset, EngineCode);
+                CompileOffsetClause(offset, query, builder);
+            }
+        }
+
+        protected virtual void CompileColumns(List<AbstractColumn> columns, Query query, SqlResultBuilder builder)
+        {
+            builder.StartSection(", ");
+            foreach (var column in columns)
+            {
+                CompileAbstractColumn(column, query, builder);
+            }
+            builder.EndSection();
+        }
+
+        protected virtual void CompileLimitClause(LimitClause limit, Query query, SqlResultBuilder builder)
+        {
+            if (!limit.HasLimit())
+            {
+                return;
+            }
+
+            builder.Append(" LIMIT ");
+            builder.AddValue(limit.Limit);
+        }
+
+        protected virtual void CompileOffsetClause(OffsetClause offset, Query query, SqlResultBuilder builder)
+        {
+            if (!offset.HasOffset())
+            {
+                return;
+            }
+
+            builder.Append(" OFFSET ");
+            builder.AddValue(offset.Offset);
+        }
+
+        protected virtual void CompileAbstractOrderBys(List<AbstractOrderBy> abstractOrderBys, Query query, SqlResultBuilder builder)
+        {
+            builder.Append(" ORDER BY ");
+            builder.StartSection(", ");
+            foreach (var abstractOrderBy in abstractOrderBys)
+            {
+                switch (abstractOrderBy)
+                {
+                    case OrderBy orderBy:
+                        CompileOrderBy(orderBy, query, builder);
+                        break;
+                    default:
+                        throw new System.NotImplementedException();
+                }
+            }
+            builder.EndSection();
+        }
+
+        private void CompileOrderBy(OrderBy orderBy, Query query, SqlResultBuilder builder)
+        {
+            builder.AppendSeparator();
+            AppendWrapped(orderBy.Column, builder);
+            if (!orderBy.Ascending)
+            {
+                builder.Append(" DESC");
             }
         }
 
@@ -134,9 +206,26 @@ namespace SqlKata.VisitorCompilers
                 case RawCondition rawCondition:
                     CompileRawCondition(rawCondition, query, builder);
                     break;
+                case InCondition inCondition:
+                    CompileInCondition(inCondition, query, builder);
+                    break;
                 default:
                     throw new System.NotImplementedException();
             }
+        }
+
+        private void CompileInCondition(InCondition inCondition, Query query, SqlResultBuilder builder)
+        {
+            AppendWrapped(inCondition.Column, builder);
+            builder.Append(" IN (");
+            builder.StartSection(", ");
+            foreach (var value in inCondition.Values)
+            {
+                builder.AppendSeparator();
+                builder.AddValue(value);
+            }
+            builder.Append(")");
+            builder.EndSection();
         }
 
         protected virtual void CompileRawCondition(RawCondition rawCondition, Query query, SqlResultBuilder builder)
@@ -153,7 +242,7 @@ namespace SqlKata.VisitorCompilers
             builder.Append(" ");
             builder.Append(basicCondition.Operator);
             builder.Append(" ");
-            builder.AddValue(basicCondition.Value, ParameterPrefix);
+            builder.AddValue(basicCondition.Value);
         }
 
         protected virtual void CompileFrom(AbstractFrom abstractFrom, Query query, SqlResultBuilder builder)
