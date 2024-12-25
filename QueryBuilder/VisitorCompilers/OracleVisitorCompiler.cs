@@ -6,6 +6,7 @@ namespace SqlKata.VisitorCompilers
     {
         public override string EngineCode => EngineCodes.Oracle;
 
+        protected override string ParameterPrefix => ":p";
         public bool UseLegacyPagination { get; set; }
     }
 }
