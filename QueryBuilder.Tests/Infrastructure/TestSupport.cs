@@ -1,15 +1,16 @@
 using SqlKata.Tests.Infrastructure.TestCompilers;
+using Compiler2 = SqlKata.Compilers.Compiler;
 
 namespace SqlKata.Tests.Infrastructure
 {
     public abstract class TestSupport2
     {
-        protected SqlResult CompileForGeneric(Query query, Func<Compiler, Compiler> configuration = null)
+        protected SqlResult CompileForGeneric(Query query, Func<Compiler2, Compiler2> configuration = null)
         {
             return CompileFor(EngineCodes.Generic, query, configuration);
         }
 
-        protected SqlResult CompileFor(string engine, Query query, Func<Compiler, Compiler> configuration = null)
+        protected SqlResult CompileFor(string engine, Query query, Func<Compiler2, Compiler2> configuration = null)
         {
             var compiler = CreateCompiler(engine);
             if (configuration != null)
@@ -20,7 +21,7 @@ namespace SqlKata.Tests.Infrastructure
             return compiler.Compile(query);
         }
 
-        protected SqlResult CompileFor(string engine, Query query, Action<Compiler> configuration)
+        protected SqlResult CompileFor(string engine, Query query, Action<Compiler2> configuration)
         {
             return CompileFor(engine, query, compiler =>
             {
@@ -29,7 +30,7 @@ namespace SqlKata.Tests.Infrastructure
             });
         }
 
-        protected Compiler CreateCompiler(string engine, bool? useLegacyPagination = null)
+        protected Compiler2 CreateCompiler(string engine, bool? useLegacyPagination = null)
         {
             return engine switch
             {
