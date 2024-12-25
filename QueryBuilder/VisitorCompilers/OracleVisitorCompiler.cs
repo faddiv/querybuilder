@@ -1,17 +1,11 @@
-﻿namespace SqlKata.VisitorCompilers
+﻿using SqlKata.Compilers;
+
+namespace SqlKata.VisitorCompilers
 {
     public class OracleVisitorCompiler : VisitorCompiler
     {
+        public override string EngineCode => EngineCodes.Oracle;
+
         public bool UseLegacyPagination { get; set; }
-
-        public void ApplyLegacyLimit(SqlResult ctx)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public string CompileLimit(SqlResult ctx)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

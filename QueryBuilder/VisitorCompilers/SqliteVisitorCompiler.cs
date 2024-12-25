@@ -1,12 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using SqlKata.Compilers;
 
 namespace SqlKata.VisitorCompilers
 {
     public class SqliteVisitorCompiler : VisitorCompiler
     {
-        public string CompileLimit(SqlResult ctx)
-        {
-            throw new System.NotImplementedException();
-        }
+        public override string EngineCode => EngineCodes.Sqlite;
     }
 }

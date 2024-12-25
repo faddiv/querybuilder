@@ -1,12 +1,11 @@
-﻿namespace SqlKata.VisitorCompilers
+﻿using SqlKata.Compilers;
+
+namespace SqlKata.VisitorCompilers
 {
     public class SqlServerVisitorCompiler : VisitorCompiler
     {
-        public bool UseLegacyPagination { get; set; }
+        public override string EngineCode => EngineCodes.SqlServer;
 
-        public string CompileLimit(SqlResult ctx)
-        {
-            throw new System.NotImplementedException();
-        }
+        public bool UseLegacyPagination { get; set; }
     }
 }

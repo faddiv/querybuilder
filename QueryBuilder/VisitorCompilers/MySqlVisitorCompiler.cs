@@ -1,12 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using SqlKata.Compilers;
 
 namespace SqlKata.VisitorCompilers
 {
     public class MySqlVisitorCompiler : VisitorCompiler
     {
-        public IEnumerable<char> CompileLimit(SqlResult ctx)
-        {
-            throw new System.NotImplementedException();
-        }
+        public override string EngineCode => EngineCodes.MySql;
     }
 }

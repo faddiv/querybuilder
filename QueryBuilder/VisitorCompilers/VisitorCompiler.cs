@@ -5,6 +5,8 @@
         protected virtual string ParameterPlaceholder { get; set; } = "?";
         protected virtual string EscapeCharacter { get; set; } = "\\";
 
+        public abstract string EngineCode { get; }
+
         protected VisitorCompiler()
         {
         }
