@@ -355,7 +355,7 @@ namespace SqlKata
 
         public Q WhereBetween<T>(string column, T lower, T higher)
         {
-            return AddComponent("where", new BetweenCondition<T>
+            return AddComponent("where", new BetweenCondition
             {
                 Column = column,
                 IsOr = GetOr(),
@@ -387,21 +387,21 @@ namespace SqlKata
             {
                 string val = values as string;
 
-                return AddComponent("where", new InCondition<string>
+                return AddComponent("where", new InCondition
                 {
                     Column = column,
                     IsOr = GetOr(),
                     IsNot = GetNot(),
-                    Values = new List<string> { val }
+                    Values = new List<object> { val }
                 });
             }
 
-            return AddComponent("where", new InCondition<T>
+            return AddComponent("where", new InCondition
             {
                 Column = column,
                 IsOr = GetOr(),
                 IsNot = GetNot(),
-                Values = values.Distinct().ToList()
+                Values = values.Distinct().Cast<object>().ToList()
             });
 
 
@@ -486,7 +486,7 @@ namespace SqlKata
 
         public Q Where(string column, string op, Query query)
         {
-            return AddComponent("where", new QueryCondition<Query>
+            return AddComponent("where", new QueryCondition
             {
                 Column = column,
                 Operator = op,
@@ -503,7 +503,7 @@ namespace SqlKata
 
         public Q WhereSub(Query query, string op, object value)
         {
-            return AddComponent("where", new SubQueryCondition<Query>
+            return AddComponent("where", new SubQueryCondition
             {
                 Value = value,
                 Operator = op,

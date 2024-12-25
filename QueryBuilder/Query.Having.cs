@@ -335,7 +335,7 @@ namespace SqlKata
 
         public Query HavingBetween<T>(string column, T lower, T higher)
         {
-            return AddComponent("having", new BetweenCondition<T>
+            return AddComponent("having", new BetweenCondition
             {
                 Column = column,
                 IsOr = GetOr(),
@@ -366,21 +366,21 @@ namespace SqlKata
             {
                 string val = values as string;
 
-                return AddComponent("having", new InCondition<string>
+                return AddComponent("having", new InCondition
                 {
                     Column = column,
                     IsOr = GetOr(),
                     IsNot = GetNot(),
-                    Values = new List<string> { val }
+                    Values = new List<object> { val }
                 });
             }
 
-            return AddComponent("having", new InCondition<T>
+            return AddComponent("having", new InCondition
             {
                 Column = column,
                 IsOr = GetOr(),
                 IsNot = GetNot(),
-                Values = values.Distinct().ToList()
+                Values = values.Distinct().Cast<object>().ToList()
             });
 
 
@@ -465,7 +465,7 @@ namespace SqlKata
 
         public Query Having(string column, string op, Query query)
         {
-            return AddComponent("having", new QueryCondition<Query>
+            return AddComponent("having", new QueryCondition
             {
                 Column = column,
                 Operator = op,

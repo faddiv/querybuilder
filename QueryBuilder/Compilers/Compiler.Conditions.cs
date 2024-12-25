@@ -68,7 +68,7 @@ namespace SqlKata.Compilers
             return WrapIdentifiers(x.Expression);
         }
 
-        protected virtual string CompileQueryCondition<T>(SqlResult ctx, QueryCondition<T> x) where T : BaseQuery<T>
+        protected virtual string CompileQueryCondition(SqlResult ctx, QueryCondition x)
         {
             var subCtx = CompileSelectQuery(x.Query);
 
@@ -77,7 +77,7 @@ namespace SqlKata.Compilers
             return Wrap(x.Column) + " " + checkOperator(x.Operator) + " (" + subCtx.RawSql + ")";
         }
 
-        protected virtual string CompileSubQueryCondition<T>(SqlResult ctx, SubQueryCondition<T> x) where T : BaseQuery<T>
+        protected virtual string CompileSubQueryCondition(SqlResult ctx, SubQueryCondition x)
         {
             var subCtx = CompileSelectQuery(x.Query);
 
@@ -190,7 +190,7 @@ namespace SqlKata.Compilers
             return $"{op}{Wrap(clause.First)} {checkOperator(clause.Operator)} {Wrap(clause.Second)}";
         }
 
-        protected virtual string CompileBetweenCondition<T>(SqlResult ctx, BetweenCondition<T> item)
+        protected virtual string CompileBetweenCondition(SqlResult ctx, BetweenCondition item)
         {
             var between = item.IsNot ? "NOT BETWEEN" : "BETWEEN";
             var lower = Parameter(ctx, item.Lower);
@@ -199,7 +199,7 @@ namespace SqlKata.Compilers
             return Wrap(item.Column) + $" {between} {lower} AND {higher}";
         }
 
-        protected virtual string CompileInCondition<T>(SqlResult ctx, InCondition<T> item)
+        protected virtual string CompileInCondition(SqlResult ctx, InCondition item)
         {
             var column = Wrap(item.Column);
 
