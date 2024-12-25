@@ -3,7 +3,7 @@ using SqlKata.VisitorCompilers;
 
 namespace SqlKata.Tests.Infrastructure;
 
-public abstract class TestSupport2
+public abstract class TestSupport
 {
     protected SqlResult CompileForGeneric(Query query, Func<VisitorCompiler, VisitorCompiler> configuration = null)
     {

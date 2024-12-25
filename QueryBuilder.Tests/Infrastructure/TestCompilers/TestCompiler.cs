@@ -5,7 +5,7 @@ namespace SqlKata.Tests.Infrastructure.TestCompilers
     /// <summary>
     /// A test class to expose private methods
     /// </summary>
-    class TestCompiler : Compiler
+    class TestCompiler : SqlKata.Compilers.Compiler
     {
         public override string EngineCode { get; } = "generic";
 

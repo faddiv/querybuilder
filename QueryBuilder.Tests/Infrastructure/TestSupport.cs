@@ -2,7 +2,7 @@ using SqlKata.Tests.Infrastructure.TestCompilers;
 
 namespace SqlKata.Tests.Infrastructure
 {
-    public abstract class TestSupport
+    public abstract class TestSupport2
     {
         protected SqlResult CompileForGeneric(Query query, Func<Compiler, Compiler> configuration = null)
         {
