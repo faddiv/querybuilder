@@ -8,5 +8,9 @@
         public const string OrderBy = "order";
         public const string Limit = "limit";
         public const string Offset = "offset";
+        public const string GroupBy = "group";
+        public const string Having = "having";
+        public const string Cte = "cte";
+        public const string Join = "join";
     }
 }
