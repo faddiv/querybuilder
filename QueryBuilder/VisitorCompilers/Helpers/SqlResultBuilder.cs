@@ -9,7 +9,6 @@ namespace SqlKata.VisitorCompilers
 {
     public class SqlResultBuilder
     {
-        private readonly Query _query;
         private readonly string _parameterPrefix;
         private readonly StringBuilder _builderRaw = new StringBuilder();
         private readonly StringBuilder _builderSql = new StringBuilder();
@@ -20,11 +19,50 @@ namespace SqlKata.VisitorCompilers
 
         public IReadOnlyList<object> Bindings => _bindings;
 
-
-        public SqlResultBuilder(Query query, string parameterPrefix)
+        public SqlResultBuilder(string parameterPrefix)
         {
-            _query = query;
             _parameterPrefix = parameterPrefix;
+        }
+
+        public void ExecuteOnComponents<TComponent, TState>(
+            Query query,
+            string component,
+            string engineCode,
+            TState state,
+            Action<ComponentFilter<TComponent>, TState, SqlResultBuilder> action)
+            where TComponent : AbstractClause
+        {
+            var useEngine = engineCode ?? query.EngineScope;
+
+            var filter = new ComponentFilter<TComponent>(component, useEngine, query.Clauses);
+
+            if (!filter.SeekFirstElement())
+            {
+                return;
+            }
+
+            action(filter, state, this);
+        }
+
+        public bool TryGetComponent<TComponent>(
+            Query query,
+            string component,
+            string engineCode,
+            out TComponent componentValue)
+            where TComponent : AbstractClause
+        {
+            var useEngine = engineCode ?? query.EngineScope;
+
+            var filter = new ComponentFilter<TComponent>(component, useEngine, query.Clauses);
+
+            if (!filter.MoveNext())
+            {
+                componentValue = null;
+                return false;
+            }
+
+            componentValue = filter.Current;
+            return true;
         }
 
         public void Append(string sql)
@@ -44,11 +82,11 @@ namespace SqlKata.VisitorCompilers
             SeparatorTracker.AppendSeparator(_builderSql);
         }
 
-        public SqlResult PrepareResult(string parameterPlaceholder, string escapeCharacter)
+        public SqlResult PrepareResult(Query query, string parameterPlaceholder, string escapeCharacter)
         {
             var prepareResult = new SqlResult(parameterPlaceholder, escapeCharacter)
             {
-                Query = _query,
+                Query = query,
                 RawSql = _builderRaw.ToString(),
                 Sql = _builderSql.ToString(), // Prepare
                 Bindings = _bindings,

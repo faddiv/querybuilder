@@ -7,7 +7,7 @@ namespace SqlKata.VisitorCompilers
 {
     public abstract class VisitorCompiler
     {
-        private HashSet<string> userOperators;
+        private readonly HashSet<string> userOperators = new HashSet<string>();
 
         protected virtual string ParameterPlaceholder => "?";
 
@@ -30,16 +30,12 @@ namespace SqlKata.VisitorCompilers
 
         public abstract string EngineCode { get; }
 
-        protected VisitorCompiler()
-        {
-        }
-
         public virtual SqlResult Compile(Query query)
         {
-            var sqlResultBuilder = new SqlResultBuilder(query, ParameterPrefix);
+            var sqlResultBuilder = new SqlResultBuilder(ParameterPrefix);
             CompileAbstractQuery(query, sqlResultBuilder);
 
-            var sqlResult = sqlResultBuilder.PrepareResult(ParameterPlaceholder, EscapeCharacter);
+            var sqlResult = sqlResultBuilder.PrepareResult(query, ParameterPlaceholder, EscapeCharacter);
 
             return sqlResult;
         }
@@ -99,68 +95,122 @@ namespace SqlKata.VisitorCompilers
 
         protected virtual void CompileSelect(Query query, SqlResultBuilder builder)
         {
-            if (query.HasComponent(SqlComponents.Cte, EngineCode))
-            {
-                var cteList = query.GetComponents<AbstractFrom>(SqlComponents.Cte, EngineCode);
-                CompileCteList(cteList, builder);
-            }
+            CompileCteListSection(query, builder);
 
-            builder.Append("SELECT ");
-            var columns = query.GetComponents<AbstractColumn>(SqlComponents.Select, EngineCode);
-            CompileColumns(columns, builder);
+            CompileSelectColumnsSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.From))
-            {
-                var from = query.GetOneComponent<AbstractFrom>(SqlComponents.From, EngineCode);
-                builder.Append(" FROM ");
-                CompileAbstractFrom(from, builder);
-            }
+            CompileFromSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.Join, EngineCode))
-            {
-                var baseJoins = query.GetComponents<BaseJoin>(SqlComponents.Join, EngineCode);
-                CompileJoins(baseJoins, builder);
-            }
+            CompileJoinSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.Where, EngineCode))
-            {
-                var conditions = query.GetComponents<AbstractCondition>(SqlComponents.Where, EngineCode);
-                builder.Append(" WHERE ");
-                CompileConditions(conditions, builder);
-            }
+            CompileWhereSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.GroupBy, EngineCode))
-            {
-                var groupBys = query.GetComponents<AbstractColumn>(SqlComponents.GroupBy, EngineCode);
-                CompileGroupBys(groupBys, builder);
-            }
+            CompileGroupBySection(query, builder);
 
-            if (!query.HasComponent(SqlComponents.Having, EngineCode))
-            {
-                var havings = query.GetComponents<AbstractCondition>(SqlComponents.Having, EngineCode);
-                CompileHavings(havings, builder);
-            }
+            CompileHavingSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.OrderBy, EngineCode))
-            {
-                var orderBys = query.GetComponents<AbstractOrderBy>(SqlComponents.OrderBy, EngineCode);
-                CompileAbstractOrderBys(orderBys, builder);
-            }
+            CompileOrderBySection(query, builder);
 
-            if (query.HasComponent(SqlComponents.Limit, EngineCode))
-            {
-                var limit = query.GetOneComponent<LimitClause>(SqlComponents.Limit, EngineCode);
-                CompileLimitClause(limit, builder);
-            }
+            CompileLimitSection(query, builder);
 
-            if (query.HasComponent(SqlComponents.Offset, EngineCode))
-            {
-                var offset = query.GetOneComponent<OffsetClause>(SqlComponents.Offset, EngineCode);
-                CompileOffsetClause(offset, builder);
-            }
+            CompileOffsetSection(query, builder);
         }
 
-        protected virtual void CompileJoins(List<BaseJoin> baseJoins, SqlResultBuilder builder)
+        protected virtual void CompileOffsetSection(Query query, SqlResultBuilder builder)
+        {
+            if (!builder.TryGetComponent<OffsetClause>(query, SqlComponents.Offset, EngineCode, out var offset))
+            {
+                return;
+            }
+
+            CompileOffsetClause(offset, builder);
+        }
+
+        protected virtual void CompileLimitSection(Query query, SqlResultBuilder builder)
+        {
+            if (!builder.TryGetComponent<LimitClause>(query, SqlComponents.Limit, EngineCode, out var limit))
+            {
+                return;
+            }
+
+            CompileLimitClause(limit, builder);
+        }
+
+        protected virtual void CompileOrderBySection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<AbstractOrderBy, VisitorCompiler>(
+                query, SqlComponents.OrderBy, EngineCode, this, (orderBys, compiler, b) =>
+                {
+                    b.Append(" ORDER BY ");
+                    compiler.CompileAbstractOrderBys(orderBys, b);
+                });
+        }
+
+        protected virtual void CompileHavingSection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<AbstractCondition, VisitorCompiler>(
+                query, SqlComponents.Having, EngineCode, this, (havings, compiler, b) =>
+                {
+                    b.Append(" HAVING ");
+                    compiler.CompileHavings(havings, b);
+                });
+        }
+
+        protected virtual void CompileGroupBySection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<AbstractColumn, VisitorCompiler>(
+                query, SqlComponents.GroupBy, EngineCode, this, (groupBys, compiler, b) =>
+                {
+                    b.Append(" GROUP BY ");
+                    compiler.CompileGroupBys(groupBys, b);
+                });
+        }
+
+        protected virtual void CompileWhereSection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<AbstractCondition, VisitorCompiler>(
+                query, SqlComponents.Where, EngineCode, this, (conditions, compiler, b) =>
+                {
+                    b.Append(" WHERE ");
+                    compiler.CompileConditions(conditions, b);
+                });
+        }
+
+        protected virtual void CompileJoinSection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<BaseJoin, VisitorCompiler>(
+                query, SqlComponents.Join, EngineCode,
+                this, (columns, compiler, b) => { compiler.CompileJoins(columns, b); });
+        }
+
+        protected virtual void CompileFromSection(Query query, SqlResultBuilder builder)
+        {
+            if (!builder.TryGetComponent<AbstractFrom>(query, SqlComponents.From, EngineCode, out var from))
+            {
+                return;
+            }
+
+            builder.Append(" FROM ");
+            CompileAbstractFrom(from, builder);
+        }
+
+
+        protected virtual void CompileSelectColumnsSection(Query query, SqlResultBuilder builder)
+        {
+            builder.Append("SELECT ");
+            builder.ExecuteOnComponents<AbstractColumn, VisitorCompiler>(
+                query, SqlComponents.Select, EngineCode,
+                this, (columns, compiler, b) => { compiler.CompileColumns(columns, b); });
+        }
+
+        protected virtual void CompileCteListSection(Query query, SqlResultBuilder builder)
+        {
+            builder.ExecuteOnComponents<AbstractFrom, VisitorCompiler>(
+                query, SqlComponents.Cte, EngineCode,
+                this, (cteList, compiler, b) => { compiler.CompileCteList(cteList, b); });
+        }
+
+        protected virtual void CompileJoins(ComponentFilter<BaseJoin> baseJoins, SqlResultBuilder builder)
         {
             builder.StartSection("");
             foreach (var baseJoin in baseJoins)
@@ -171,7 +221,7 @@ namespace SqlKata.VisitorCompilers
             builder.EndSection();
         }
 
-        protected virtual void CompileCteList(List<AbstractFrom> cteList, SqlResultBuilder builder)
+        protected virtual void CompileCteList(ComponentFilter<AbstractFrom> cteList, SqlResultBuilder builder)
         {
             foreach (var abstractFrom in cteList)
             {
@@ -196,9 +246,8 @@ namespace SqlKata.VisitorCompilers
             builder.Append(")\n");
         }
 
-        protected virtual void CompileHavings(List<AbstractCondition> havings, SqlResultBuilder builder)
+        protected virtual void CompileHavings(ComponentFilter<AbstractCondition> havings, SqlResultBuilder builder)
         {
-            builder.Append(" HAVING ");
             builder.StartSection(" AND ");
             foreach (var having in havings)
             {
@@ -208,13 +257,12 @@ namespace SqlKata.VisitorCompilers
             builder.EndSection();
         }
 
-        protected virtual void CompileGroupBys(List<AbstractColumn> groupBys, SqlResultBuilder builder)
+        protected virtual void CompileGroupBys(ComponentFilter<AbstractColumn> groupBys, SqlResultBuilder builder)
         {
-            builder.Append(" GROUP BY ");
             CompileColumns(groupBys, builder);
         }
 
-        protected virtual void CompileColumns(List<AbstractColumn> columns, SqlResultBuilder builder)
+        protected virtual void CompileColumns(ComponentFilter<AbstractColumn> columns, SqlResultBuilder builder)
         {
             builder.StartSection(", ");
             foreach (var column in columns)
@@ -247,9 +295,10 @@ namespace SqlKata.VisitorCompilers
             builder.AddValue(offset.Offset);
         }
 
-        protected virtual void CompileAbstractOrderBys(List<AbstractOrderBy> abstractOrderBys, SqlResultBuilder builder)
+        protected virtual void CompileAbstractOrderBys(
+            ComponentFilter<AbstractOrderBy> abstractOrderBys,
+            SqlResultBuilder builder)
         {
-            builder.Append(" ORDER BY ");
             builder.StartSection(", ");
             foreach (var abstractOrderBy in abstractOrderBys)
             {
@@ -278,6 +327,19 @@ namespace SqlKata.VisitorCompilers
 
         protected void CompileConditions(
             IEnumerable<AbstractCondition> conditions,
+            SqlResultBuilder builder)
+        {
+            builder.StartSection(" AND ");
+            foreach (var condition in conditions)
+            {
+                CompileCondition(condition, builder);
+            }
+
+            builder.EndSection();
+        }
+
+        protected void CompileConditions(
+            ComponentFilter<AbstractCondition> conditions,
             SqlResultBuilder builder)
         {
             builder.StartSection(" AND ");
