@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using SqlKata.VisitorCompilers.Helpers;
 
 namespace SqlKata.VisitorCompilers
@@ -11,9 +10,7 @@ namespace SqlKata.VisitorCompilers
     {
         private readonly string _parameterPrefix;
         private readonly StringBuilder _builderRaw = new StringBuilder();
-        private readonly StringBuilder _builderSql = new StringBuilder();
         private readonly List<object> _bindings = new List<object>();
-        private readonly Dictionary<string, object> _namedBindings = new Dictionary<string, object>();
 
         private SeparatorTracker SeparatorTracker { get; } = new SeparatorTracker();
 
@@ -68,29 +65,31 @@ namespace SqlKata.VisitorCompilers
         public void Append(string sql)
         {
             _builderRaw.Append(sql);
-            _builderSql.Append(sql);
         }
 
         public void Append(string sql, int start, int length)
         {
             _builderRaw.Append(sql, start, length);
-            _builderSql.Append(sql, start, length);
         }
+
         public void AppendSeparator()
         {
             SeparatorTracker.AppendSeparator(_builderRaw);
-            SeparatorTracker.AppendSeparator(_builderSql);
         }
 
         public SqlResult PrepareResult(Query query, string parameterPlaceholder, string escapeCharacter)
         {
+            var rawSql = _builderRaw.ToString();
+            var namedBindings = new Dictionary<string, object>();
+            var sql = BuildSqlWithNamedBindings(rawSql, parameterPlaceholder, namedBindings);
+
             var prepareResult = new SqlResult(parameterPlaceholder, escapeCharacter)
             {
                 Query = query,
-                RawSql = _builderRaw.ToString(),
-                Sql = _builderSql.ToString(), // Prepare
+                RawSql = rawSql,
+                Sql = sql.ToString(), // Prepare
                 Bindings = _bindings,
-                NamedBindings = _namedBindings
+                NamedBindings = namedBindings
             };
             return prepareResult;
         }
@@ -107,11 +106,8 @@ namespace SqlKata.VisitorCompilers
 
         public void AddValue(object value)
         {
-            var parameter = $"{_parameterPrefix}{_bindings.Count}";
             _builderRaw.Append('?');
-            _builderSql.Append(parameter);
             _bindings.Add(value);
-            _namedBindings.Add(parameter, value);
         }
 
         public void AppendRaw(string rawConditionExpression, object[] rawConditionBindings)
@@ -121,17 +117,45 @@ namespace SqlKata.VisitorCompilers
             {
                 throw new ArgumentException("Raw condition expression contains unexpected number of bindings");
             }
-            var regex = new Regex(@"\?");
-            var index = 0;
-            var sql = regex.Replace(rawConditionExpression, match =>
-            {
-                var parameter = $"{_parameterPrefix}{_bindings.Count}";
-                _bindings.Add(rawConditionBindings[index]);
-                index++;
-                return parameter;
-            });
+
+            _bindings.AddRange(rawConditionBindings);
             _builderRaw.Append(rawConditionExpression);
-            _builderSql.Append(sql);
+        }
+
+        private StringBuilder BuildSqlWithNamedBindings(
+            string rawSql,
+            string parameterPlaceholder,
+            Dictionary<string, object> namedBindings)
+        {
+            var index = 0;
+            var sql = new StringBuilder(PredictLengthNeeded(rawSql));
+            var startSlice = 0;
+            var endSlice = 0;
+            while (endSlice < rawSql.Length)
+            {
+                endSlice = parameterPlaceholder.Length == 1
+                    ? rawSql.IndexOf(parameterPlaceholder[0], startSlice)
+                    : rawSql.IndexOf(parameterPlaceholder, startSlice, StringComparison.Ordinal);
+                if (endSlice == -1)
+                {
+                    sql.Append(rawSql, startSlice, rawSql.Length - startSlice);
+                    break;
+                }
+
+                sql.Append(rawSql, startSlice, endSlice - startSlice);
+                var parameter = $"{_parameterPrefix}{index}";
+                namedBindings.Add(parameter, _bindings[index]);
+                sql.Append(parameter);
+                index++;
+                startSlice = endSlice + parameterPlaceholder.Length;
+            }
+
+            return sql;
+        }
+
+        private int PredictLengthNeeded(string rawSql)
+        {
+            return rawSql.Length + (_bindings.Count < 10 ? _bindings.Count * 2 : _bindings.Count * 3);
         }
     }
 }
