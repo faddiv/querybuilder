@@ -170,7 +170,7 @@ namespace SqlKata.Tests.MySql
             });
 
             var exists = db.Query("Transaction").Exists();
-            Assert.Equal(false, exists);
+            Assert.False(exists);
 
             db.Drop("Transaction");
         }
@@ -191,7 +191,7 @@ namespace SqlKata.Tests.MySql
             });
 
             var exists = db.Query("Transaction").Exists();
-            Assert.Equal(true, exists);
+            Assert.True(exists);
 
             db.Drop("Transaction");
         }
@@ -245,19 +245,15 @@ namespace SqlKata.Tests.MySql
             db.Drop("Transaction");
         }
 
-        private static string GetConnectionString()
-        {
-            var config = new ConfigurationBuilder()
-                .AddUserSecrets(typeof(MySqlExecutionTest).Assembly)
-                .Build();
-            return config.GetConnectionString("MySqlExecutionTest");
-        }
-
-        private static Lazy<string> ConnectionString { get; } = new(GetConnectionString);
-
         QueryFactory DB()
         {
-            var connection = new MySqlConnection(ConnectionString.Value);
+            var host = Environment.GetEnvironmentVariable("SQLKATA_MYSQL_HOST");
+            var user = Environment.GetEnvironmentVariable("SQLKATA_MYSQL_USER");
+            var dbName = Environment.GetEnvironmentVariable("SQLKATA_MYSQL_DB");
+            var dbPass = Environment.GetEnvironmentVariable("SQLKATA_MYSQL_PASSWORD");
+            var cs = $"Server={host};User={user};Database={dbName};Password={dbPass}";
+
+            var connection = new MySqlConnection(cs);
 
             var db = new QueryFactory(connection, new MySqlCompiler());
 
@@ -268,3 +264,4 @@ namespace SqlKata.Tests.MySql
 
     }
 }
+
