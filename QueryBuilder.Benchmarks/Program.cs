@@ -1,8 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿// BenchmarkDotNet: https://benchmarkdotnet.org/
 using BenchmarkDotNet.Running;
-using QueryBuilder.Benchmarks;
 
-SelectsBenchmarkTests.TestAll();
-
-BenchmarkRunner.Run<SelectsBenchmark>();
+BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);

@@ -5,27 +5,6 @@ namespace QueryBuilder.Benchmarks.Infrastructure;
 
 public class TestSupport
 {
-
-    public static SqlResult CompileFor(string engine, Query query, Func<Compiler, Compiler> configuration = null)
-    {
-        var compiler = CreateCompiler(engine);
-        if (configuration != null)
-        {
-            compiler = configuration(compiler);
-        }
-
-        return compiler.Compile(query);
-    }
-
-    public static SqlResult CompileFor(string engine, Query query, Action<Compiler> configuration)
-    {
-        return CompileFor(engine, query, compiler =>
-        {
-            configuration(compiler);
-            return compiler;
-        });
-    }
-
     public static Compiler CreateCompiler(string engine)
     {
         return engine switch

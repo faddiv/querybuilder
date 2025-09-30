@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using QueryBuilder.Benchmarks.Infrastructure;
 using SqlKata;
 using SqlKata.Compilers;
@@ -16,8 +14,7 @@ public class SelectsBenchmark
 
     public Compiler compiler;
 
-    [Params(
-        EngineCodes.SqlServer)]
+    [Params(EngineCodes.SqlServer)]
     public string EngineCode { get; set; }
 
     [GlobalSetup]
@@ -78,5 +75,4 @@ public class SelectsBenchmark
     {
         return compiler.Compile(selectWith);
     }
-
 }
