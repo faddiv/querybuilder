@@ -7,7 +7,7 @@ namespace SqlKata.Tests.Infrastructure.TestCompilers
     /// </summary>
     class TestCompiler : Compiler
     {
-        public override string EngineCode { get; } = "generic";
+        public override string EngineCode { get; } = "test";
 
         public virtual MethodInfo Call_FindCompilerMethodInfo(Type clauseType, string methodName)
         {
