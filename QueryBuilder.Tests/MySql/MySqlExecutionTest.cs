@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
 using SqlKata.Execution;
 using SqlKata.Tests.Infrastructure;
